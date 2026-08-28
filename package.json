@@ -1,0 +1,51 @@
+{
+  "name": "mailgate",
+  "version": "1.0.1",
+  "description": "Fast, offline-first email validation and fraud detection library for Node.js",
+  "main": "src/validator.js",
+  "exports": {
+    ".": "./src/validator.js",
+    "./server": "./src/server.js"
+  },
+  "bin": {
+    "mailgate": "bin/cli.js"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js"
+  },
+  "keywords": [
+    "email-validation",
+    "disposable-email",
+    "email-fraud-detection",
+    "spam-prevention",
+    "email-verifier",
+    "throwaway-email",
+    "mx-validation",
+    "anti-fraud"
+  ],
+  "author": "vikas-6 (https://github.com/vikas-6)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vikas-6/mailgate.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vikas-6/mailgate/issues"
+  },
+  "homepage": "https://mailgate.netlify.app/",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "files": [
+    "src/",
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "validator": "^13.12.0"
+  }
+}
