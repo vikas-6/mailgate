@@ -1,43 +1,104 @@
 const dns = require('dns').promises;
 const validator = require('validator');
 const disposableDomainsList = require('./data/disposable-domains.json');
-const { THRESHOLDS, ROLE_USERNAMES, FREE_WEBMAIL_DOMAINS, TYPO_DOMAINS } = require('./config/constants');
+const {
+  THRESHOLDS,
+  ROLE_USERNAMES,
+  FREE_WEBMAIL_DOMAINS,
+  TYPO_DOMAINS,
+} = require('./config/constants');
 
-const disposableSet = new Set(disposableDomainsList.map(d => d.toLowerCase()));
+const disposableSet = new Set(disposableDomainsList.map((d) => d.toLowerCase()));
 
 // Reference list used only for Levenshtein typo-distance checks
 const TYPO_REFERENCE_DOMAINS = [
-  'gmail.com', 'google.com', 'yahoo.com', 'hotmail.com',
-  'outlook.com', 'icloud.com', 'protonmail.com', 'proton.me',
-  'aol.com', 'zoho.com', 'live.com', 'msn.com', 'yandex.com'
+  'gmail.com',
+  'google.com',
+  'yahoo.com',
+  'hotmail.com',
+  'outlook.com',
+  'icloud.com',
+  'protonmail.com',
+  'proton.me',
+  'aol.com',
+  'zoho.com',
+  'live.com',
+  'msn.com',
+  'yandex.com',
 ];
 
 const TEMP_MX_HOST_PATTERNS = [
-  'mailtm', 'mail.tm', 'mailinator', 'guerrillamail', 'yopmail',
-  'trashmail', 'inboxkitten', 'discard.email', 'dispostable',
-  'temp-mail', 'tempmail', 'emailondeck', 'mohmal', 'maildrop',
-  'anonaddy', 'simplelogin', 'forwardemail', 'improvmx'
+  'mailtm',
+  'mail.tm',
+  'mailinator',
+  'guerrillamail',
+  'yopmail',
+  'trashmail',
+  'inboxkitten',
+  'discard.email',
+  'dispostable',
+  'temp-mail',
+  'tempmail',
+  'emailondeck',
+  'mohmal',
+  'maildrop',
+  'anonaddy',
+  'simplelogin',
+  'forwardemail',
+  'improvmx',
 ];
 
 const PARKED_MX_HOST_PATTERNS = [
-  'sedo', 'dan.com', 'parklogic', 'bodis', 'above.com',
-  'parking', 'hugedomains', 'undeveloped', 'domaincontrol.com',
-  'registrar-servers.com', 'parkingcrew'
+  'sedo',
+  'dan.com',
+  'parklogic',
+  'bodis',
+  'above.com',
+  'parking',
+  'hugedomains',
+  'undeveloped',
+  'domaincontrol.com',
+  'registrar-servers.com',
+  'parkingcrew',
 ];
 
 const HIGH_RISK_TLDS = [
-  '.tk', '.ml', '.ga', '.cf', '.gq', '.cfd', '.icu',
-  '.site', '.click', '.ccwu.cc', '.dynv6.net', '.cloudns.cc',
-  '.io.vn', '.fr.nf', '.eu.cc'
+  '.tk',
+  '.ml',
+  '.ga',
+  '.cf',
+  '.gq',
+  '.cfd',
+  '.icu',
+  '.site',
+  '.click',
+  '.ccwu.cc',
+  '.dynv6.net',
+  '.cloudns.cc',
+  '.io.vn',
+  '.fr.nf',
+  '.eu.cc',
   // ponytail: .top/.xyz/.xyz removed: too many legit businesses use them (x.com, etc.)
 ];
 
 // Keywords matched only against the registered domain label (before first dot),
 // NOT as a substring of full domain — prevents false positives like spamassassin.apache.org
 const SUSPICIOUS_DOMAIN_LABELS = new Set([
-  'tempmail', 'disposable', 'trashmail', 'fakemail', 'burnermail',
-  'guerrillamail', 'throwaway', '10minutemail', '20minutemail',
-  'tmpmail', 'spammail', 'catchall', 'sharklaser', 'maildrop', 'mailgenerator'
+  'tempmail',
+  'disposable',
+  'trashmail',
+  'fakemail',
+  'burnermail',
+  'guerrillamail',
+  'throwaway',
+  '10minutemail',
+  '20minutemail',
+  'tmpmail',
+  'spammail',
+  'catchall',
+  'sharklaser',
+  'maildrop',
+  'mailgenerator',
 ]);
 
 const MAX_EMAIL_LENGTH = 320; // RFC 5321 maximum
@@ -46,14 +107,18 @@ const MAX_EMAIL_LENGTH = 320; // RFC 5321 maximum
  * Computes Levenshtein distance between two strings.
  */
 function levenshtein(a, b) {
-  const m = a.length, n = b.length;
+  const m = a.length,
+    n = b.length;
   const dp = Array.from({ length: m + 1 }, (_, i) => [i]);
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let j = 0; j <= n; j++) {
+    dp[0][j] = j;
+  }
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1]
-        : 1 + Math.min(dp[i - 1][j - 1], dp[i][j - 1], dp[i - 1][j]);
+      dp[i][j] =
+        a[i - 1] === b[j - 1]
+          ? dp[i - 1][j - 1]
+          : 1 + Math.min(dp[i - 1][j - 1], dp[i][j - 1], dp[i - 1][j]);
     }
   }
   return dp[m][n];
@@ -66,12 +131,18 @@ function levenshtein(a, b) {
  */
 function detectTypoDomain(domain) {
   // Never flag known legitimate providers as typos
-  if (FREE_WEBMAIL_DOMAINS.has(domain)) return { isTypo: false, targetDomain: null };
+  if (FREE_WEBMAIL_DOMAINS.has(domain)) {
+    return { isTypo: false, targetDomain: null };
+  }
 
-  if (TYPO_DOMAINS.has(domain)) return { isTypo: true, targetDomain: 'known typo list' };
+  if (TYPO_DOMAINS.has(domain)) {
+    return { isTypo: true, targetDomain: 'known typo list' };
+  }
 
   for (const target of TYPO_REFERENCE_DOMAINS) {
-    if (domain === target) return { isTypo: false, targetDomain: null };
+    if (domain === target) {
+      return { isTypo: false, targetDomain: null };
+    }
     const dist = levenshtein(domain, target);
     if (dist <= 2 && Math.abs(domain.length - target.length) <= 2) {
       return { isTypo: true, targetDomain: target };
@@ -87,20 +158,29 @@ function detectTypoDomain(domain) {
  */
 function isGibberishUsername(local) {
   const clean = local.toLowerCase().replace(/[^a-z0-9]/g, '');
-  if (clean.length < 6) return false;
+  if (clean.length < 6) {
+    return false;
+  }
 
   const CONSONANTS = new Set('bcdfghjklmnpqrstvwxyz');
-  let maxRun = 0, run = 0;
+  let maxRun = 0,
+    run = 0;
   for (const ch of clean) {
     run = CONSONANTS.has(ch) ? run + 1 : 0;
-    if (run > maxRun) maxRun = run;
+    if (run > maxRun) {
+      maxRun = run;
+    }
   }
-  if (maxRun >= 4) return true;
+  if (maxRun >= 4) {
+    return true;
+  }
 
   const digits = clean.replace(/[^0-9]/g, '').length;
   const letters = clean.replace(/[^a-z]/g, '').length;
   if (clean.length >= 7 && digits >= 2 && letters >= 4) {
-    if (!/19\d\d|20\d\d/.test(clean)) return true;
+    if (!/19\d\d|20\d\d/.test(clean)) {
+      return true;
+    }
   }
 
   return false;
@@ -148,12 +228,24 @@ function hasSuspiciousDomainLabel(domain) {
  */
 async function validateEmail(email) {
   if (!email || typeof email !== 'string' || email.length > MAX_EMAIL_LENGTH) {
-    return { isValid: false, score: 100, action: 'BLOCK', reason: 'Empty, invalid, or oversized input', details: {} };
+    return {
+      isValid: false,
+      score: 100,
+      action: 'BLOCK',
+      reason: 'Empty, invalid, or oversized input',
+      details: {},
+    };
   }
 
   const cleanEmail = email.trim().toLowerCase();
   if (!validator.isEmail(cleanEmail)) {
-    return { isValid: false, score: 100, action: 'BLOCK', reason: 'Invalid email syntax (RFC 5322)', details: {} };
+    return {
+      isValid: false,
+      score: 100,
+      action: 'BLOCK',
+      reason: 'Invalid email syntax (RFC 5322)',
+      details: {},
+    };
   }
 
   const atIdx = cleanEmail.indexOf('@');
@@ -162,50 +254,85 @@ async function validateEmail(email) {
   const isPlusAlias = localPart.includes('+');
   const baseLocal = isPlusAlias ? localPart.split('+')[0] : localPart;
 
-  const isHighRiskTld = HIGH_RISK_TLDS.some(tld => domain.endsWith(tld));
+  const isHighRiskTld = HIGH_RISK_TLDS.some((tld) => domain.endsWith(tld));
 
-  let isDisposable = disposableSet.has(domain)
-    || hasSuspiciousDomainLabel(domain)   // label-only match, not substring
-    || isHighRiskTld;
+  let isDisposable =
+    disposableSet.has(domain) ||
+    hasSuspiciousDomainLabel(domain) || // label-only match, not substring
+    isHighRiskTld;
 
-  const typoCheck = detectTypoDomain(domain);  // skips FREE_WEBMAIL_DOMAINS safely
+  const typoCheck = detectTypoDomain(domain); // skips FREE_WEBMAIL_DOMAINS safely
   const isGibberish = isGibberishUsername(baseLocal);
   const isRole = ROLE_USERNAMES.has(baseLocal);
   const isFreeWebmail = FREE_WEBMAIL_DOMAINS.has(domain);
 
-  let hasMxRecords = true, mxError = null, isTempMxHost = false, isParkedDomain = false, mxHosts = [];
+  let hasMxRecords = true,
+    mxError = null,
+    isTempMxHost = false,
+    isParkedDomain = false,
+    mxHosts = [];
 
   try {
     const mxRecords = await resolveMxWithTimeout(domain);
     hasMxRecords = Array.isArray(mxRecords) && mxRecords.length > 0;
     if (hasMxRecords) {
-      mxHosts = mxRecords.map(r => r.exchange.toLowerCase());
-      isTempMxHost = mxHosts.some(h => TEMP_MX_HOST_PATTERNS.some(p => h.includes(p)));
-      isParkedDomain = mxHosts.some(h => PARKED_MX_HOST_PATTERNS.some(p => h.includes(p)));
-      if (isTempMxHost) isDisposable = true;
+      mxHosts = mxRecords.map((r) => r.exchange.toLowerCase());
+      isTempMxHost = mxHosts.some((h) => TEMP_MX_HOST_PATTERNS.some((p) => h.includes(p)));
+      isParkedDomain = mxHosts.some((h) => PARKED_MX_HOST_PATTERNS.some((p) => h.includes(p)));
+      if (isTempMxHost) {
+        isDisposable = true;
+      }
     }
   } catch {
     // Known free webmail providers treated as live to handle transient DNS failures
     hasMxRecords = isFreeWebmail;
-    if (!isFreeWebmail && !isDisposable) mxError = 'No active MX records found';
+    if (!isFreeWebmail && !isDisposable) {
+      mxError = 'No active MX records found';
+    }
   }
 
   let score = 0;
   const reasons = [];
 
-  if (isDisposable)                        { score += 90; reasons.push('Disposable or temporary email provider'); }
-  if (typoCheck.isTypo)                    { score += 90; reasons.push(`Typo-squatted domain (target: ${typoCheck.targetDomain})`); }
-  if (isGibberish)                         { score += 65; reasons.push('Random or bot-generated username pattern'); }
-  if (isParkedDomain && !isDisposable)     { score += 80; reasons.push('MX record points to domain parking service'); }
-  if (isTempMxHost && !isDisposable)       { score += 90; reasons.push('MX record points to disposable mail infrastructure'); }
-  if (!hasMxRecords && !isFreeWebmail)     { score += 90; reasons.push('No active MX records found'); }
-  if (isRole)                              { score += 25; reasons.push('Role-based address (non-personal)'); }
+  if (isDisposable) {
+    score += 90;
+    reasons.push('Disposable or temporary email provider');
+  }
+  if (typoCheck.isTypo) {
+    score += 90;
+    reasons.push(`Typo-squatted domain (target: ${typoCheck.targetDomain})`);
+  }
+  if (isGibberish) {
+    score += 65;
+    reasons.push('Random or bot-generated username pattern');
+  }
+  if (isParkedDomain && !isDisposable) {
+    score += 80;
+    reasons.push('MX record points to domain parking service');
+  }
+  if (isTempMxHost && !isDisposable) {
+    score += 90;
+    reasons.push('MX record points to disposable mail infrastructure');
+  }
+  if (!hasMxRecords && !isFreeWebmail) {
+    score += 90;
+    reasons.push('No active MX records found');
+  }
+  if (isRole) {
+    score += 25;
+    reasons.push('Role-based address (non-personal)');
+  }
   // ponytail: plus-alias not scored: user+tag@gmail.com is valid usage
 
   score = Math.min(score, 100);
 
   const action = score >= THRESHOLDS.BLOCK ? 'BLOCK' : score >= THRESHOLDS.FLAG ? 'FLAG' : 'ALLOW';
-  const isValid = score < THRESHOLDS.BLOCK && !isDisposable && !typoCheck.isTypo && hasMxRecords && !isParkedDomain;
+  const isValid =
+    score < THRESHOLDS.BLOCK &&
+    !isDisposable &&
+    !typoCheck.isTypo &&
+    hasMxRecords &&
+    !isParkedDomain;
 
   return {
     email: cleanEmail,
@@ -214,10 +341,20 @@ async function validateEmail(email) {
     action,
     reason: reasons.length > 0 ? reasons.join('; ') : 'Valid email',
     details: {
-      isDisposable, isTypoDomain: typoCheck.isTypo, typoTarget: typoCheck.targetDomain,
-      isGibberish, isParkedDomain, isHighRiskTld, isRole, isFreeWebmail, isPlusAlias,
-      hasMxRecords, domain, mxHosts, mxError
-    }
+      isDisposable,
+      isTypoDomain: typoCheck.isTypo,
+      typoTarget: typoCheck.targetDomain,
+      isGibberish,
+      isParkedDomain,
+      isHighRiskTld,
+      isRole,
+      isFreeWebmail,
+      isPlusAlias,
+      hasMxRecords,
+      domain,
+      mxHosts,
+      mxError,
+    },
   };
 }
 

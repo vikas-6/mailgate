@@ -2,11 +2,13 @@
 
 > Fast, offline-first email validation and fraud detection for Node.js
 
-[![Website](https://img.shields.io/badge/Website-mailgate.netlify.app-00C7B7?style=flat&logo=netlify)](https://mailgate.netlify.app/)
+[![CI](https://github.com/vikas-6/mailgate/actions/workflows/ci.yml/badge.svg)](https://github.com/vikas-6/mailgate/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/vikas-6/mailgate/actions/workflows/codeql.yml/badge.svg)](https://github.com/vikas-6/mailgate/actions/workflows/codeql.yml)
 [![npm](https://img.shields.io/npm/v/mailgate.svg)](https://www.npmjs.com/package/mailgate)
 [![npm downloads](https://img.shields.io/npm/dt/mailgate.svg)](https://www.npmjs.com/package/mailgate)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![Node.js](https://img.shields.io/node/v/mailgate.svg)](https://nodejs.org)
+[![Website](https://img.shields.io/badge/Website-mailgate.netlify.app-00C7B7?style=flat&logo=netlify)](https://mailgate.netlify.app/)
 
 MailGate detects disposable, fake, and fraudulent email addresses using a bundled database of **8,400+ blocked domains** combined with live DNS/MX checks, typo-squatting detection, and bot username analysis in under **1ms** with zero external API calls.
 
@@ -16,7 +18,7 @@ MailGate detects disposable, fake, and fraudulent email addresses using a bundle
 npm install mailgate
 ```
 
-Requires Node.js 16 or higher.
+Requires Node.js 18 or higher.
 
 ## Usage
 
@@ -26,9 +28,9 @@ const { validateEmail } = require('mailgate');
 const result = await validateEmail('user@mailinator.com');
 
 console.log(result.isValid); // false
-console.log(result.action);  // 'BLOCK'
-console.log(result.score);   // 90
-console.log(result.reason);  // 'Disposable or temporary email provider'
+console.log(result.action); // 'BLOCK'
+console.log(result.score); // 90
+console.log(result.reason); // 'Disposable or temporary email provider'
 ```
 
 ## API
@@ -70,11 +72,11 @@ Returns a `Promise` that resolves with a validation result object.
 
 #### Action values
 
-| Value   | Score range | What to do                                              |
-| ------- | ----------- | ------------------------------------------------------- |
-| `ALLOW` | 0 - 34      | Accept the email                                        |
-| `FLAG`  | 35 - 69     | Require additional verification (OTP, CAPTCHA)          |
-| `BLOCK` | 70 - 100    | Reject registration                                     |
+| Value   | Score range | What to do                                     |
+| ------- | ----------- | ---------------------------------------------- |
+| `ALLOW` | 0 – 34      | Accept the email                               |
+| `FLAG`  | 35 – 69     | Require additional verification (OTP, CAPTCHA) |
+| `BLOCK` | 70 – 100    | Reject registration                            |
 
 ## Examples
 
@@ -157,13 +159,35 @@ cd mailgate && npm install && npm start
 # → http://localhost:3000
 ```
 
-| Method | Endpoint                              | Description              |
-| ------ | ------------------------------------- | ------------------------ |
-| GET    | `/health`                             | Server health check      |
-| POST   | `/api/v1/verify`                      | Full inspection (JSON body `{ email }`) |
-| GET    | `/api/v1/check-email?email=...`       | Quick GET validation     |
+| Method | Endpoint                        | Description                             |
+| ------ | ------------------------------- | --------------------------------------- |
+| GET    | `/health`                       | Server health check                     |
+| POST   | `/api/v1/verify`                | Full inspection (JSON body `{ email }`) |
+| GET    | `/api/v1/check-email?email=...` | Quick GET validation                    |
 
 Rate limit: 60 requests / minute per IP. No authentication required.
+
+## Contributing
+
+We welcome contributions! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
+
+```sh
+git clone https://github.com/vikas-6/mailgate
+cd mailgate && npm install
+npm test       # run the test suite
+npm run lint   # check code quality
+```
+
+Please follow [Conventional Commits](https://www.conventionalcommits.org/) for commit messages.
+
+## Security
+
+Found a vulnerability? **Please do not open a public issue.**
+See [SECURITY.md](./SECURITY.md) for our responsible disclosure policy and how to report privately.
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for a full history of releases.
 
 ## License
 

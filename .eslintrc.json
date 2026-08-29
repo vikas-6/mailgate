@@ -1,0 +1,32 @@
+{
+  "env": {
+    "node": true,
+    "es2022": true
+  },
+  "extends": ["eslint:recommended"],
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "commonjs"
+  },
+  "rules": {
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "no-console": "warn",
+    "eqeqeq": ["error", "always"],
+    "curly": ["error", "all"],
+    "no-var": "error",
+    "prefer-const": "error",
+    "no-throw-literal": "error",
+    "no-return-await": "error",
+    "no-promise-executor-return": "error",
+    "require-await": "warn"
+  },
+  "ignorePatterns": ["node_modules/", "coverage/"],
+  "overrides": [
+    {
+      "files": ["tests/**/*.js"],
+      "rules": {
+        "require-await": "off"
+      }
+    }
+  ]
+}
